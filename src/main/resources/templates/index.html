@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PCO Lyrics Viewer</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            padding-top: 20px;
+        }
+        .song-card {
+            margin-bottom: 20px;
+        }
+        .lyrics {
+            white-space: pre-wrap;
+            font-size: 1.1rem;
+            line-height: 1.6;
+        }
+        .song-info {
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="mb-4">PCO Lyrics Viewer</h1>
+        
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Service Types</h5>
+                    </div>
+                    <div class="card-body">
+                        <select id="serviceTypeSelect" class="form-select">
+                            <option value="">Select a service type</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Plans</h5>
+                    </div>
+                    <div class="card-body">
+                        <select id="planSelect" class="form-select" disabled>
+                            <option value="">Select a plan</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Actions</h5>
+                    </div>
+                    <div class="card-body">
+                        <button id="loadSongsBtn" class="btn btn-primary w-100" disabled>Load Songs</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="songsContainer" class="row">
+            <!-- Songs will be loaded here -->
+        </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const serviceTypeSelect = document.getElementById('serviceTypeSelect');
+            const planSelect = document.getElementById('planSelect');
+            const loadSongsBtn = document.getElementById('loadSongsBtn');
+            const songsContainer = document.getElementById('songsContainer');
+            
+            // Load service types
+            fetch('/pco-lyrics-viewer/api/pco/service-types')
+                .then(response => response.json())
+                .then(serviceTypes => {
+                    serviceTypes.forEach(serviceType => {
+                        const option = document.createElement('option');
+                        option.value = serviceType.id;
+                        option.textContent = serviceType.attributes.name;
+                        serviceTypeSelect.appendChild(option);
+                    });
+                })
+                .catch(error => console.error('Error loading service types:', error));
+            
+            // Handle service type selection
+            serviceTypeSelect.addEventListener('change', function() {
+                planSelect.innerHTML = '<option value="">Select a plan</option>';
+                planSelect.disabled = true;
+                loadSongsBtn.disabled = true;
+                
+                if (this.value) {
+                    fetch(`/pco-lyrics-viewer/api/pco/service-types/${this.value}/plans`)
+                        .then(response => response.json())
+                        .then(plans => {
+                            plans.forEach(plan => {
+                                const option = document.createElement('option');
+                                option.value = plan.id;
+                                option.textContent = plan.attributes.dates;
+                                planSelect.appendChild(option);
+                            });
+                            planSelect.disabled = false;
+                        })
+                        .catch(error => console.error('Error loading plans:', error));
+                }
+            });
+            
+            // Handle plan selection
+            planSelect.addEventListener('change', function() {
+                loadSongsBtn.disabled = !this.value;
+            });
+            
+            // Handle load songs button click
+            loadSongsBtn.addEventListener('click', function() {
+                songsContainer.innerHTML = '<div class="col-12 text-center"><div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div></div>';
+                
+                fetch(`/pco-lyrics-viewer/api/pco/plans/${planSelect.value}/songs`)
+                    .then(response => response.json())
+                    .then(songs => {
+                        songsContainer.innerHTML = '';
+                        
+                        if (songs.length === 0) {
+                            songsContainer.innerHTML = '<div class="col-12"><div class="alert alert-info">No songs found for this plan.</div></div>';
+                            return;
+                        }
+                        
+                        songs.forEach(song => {
+                            const songCard = document.createElement('div');
+                            songCard.className = 'col-md-6 song-card';
+                            
+                            songCard.innerHTML = `
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h5>${song.title}</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="song-info">
+                                            <p><strong>Author:</strong> ${song.author || 'Unknown'}</p>
+                                            <p><strong>Key:</strong> ${song.key || 'Not specified'}</p>
+                                            <p><strong>CCLI:</strong> ${song.ccliNumber || 'Not specified'}</p>
+                                        </div>
+                                        <hr>
+                                        <div class="lyrics">${song.lyrics || 'No lyrics available'}</div>
+                                    </div>
+                                </div>
+                            `;
+                            
+                            songsContainer.appendChild(songCard);
+                        });
+                    })
+                    .catch(error => {
+                        console.error('Error loading songs:', error);
+                        songsContainer.innerHTML = '<div class="col-12"><div class="alert alert-danger">Error loading songs. Please try again.</div></div>';
+                    });
+            });
+        });
+    </script>
+</body>
+</html> 

@@ -1,0 +1,55 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '3.2.0'
+    id 'io.spring.dependency-management' version '1.1.4'
+}
+
+group = 'com.pco'
+version = '0.0.1-SNAPSHOT'
+
+java {
+    sourceCompatibility = '21'
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-webflux'
+    implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'io.github.resilience4j:resilience4j-spring-boot3:2.1.0'
+    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.2.0'
+    
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+    
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.mockito:mockito-core'
+    testImplementation 'org.mockito:mockito-junit-jupiter'
+    testImplementation 'com.squareup.okhttp3:mockwebserver:4.11.0'
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
+
+// Task to create a directory for React frontend
+task createReactApp {
+    doLast {
+        mkdir "${projectDir}/frontend"
+    }
+}
+
+// Task to build React frontend (will be implemented later)
+task buildReactApp(dependsOn: createReactApp) {
+    doLast {
+        println "React frontend build task placeholder"
+    }
+}
+
+// Make the bootJar task depend on buildReactApp
+bootJar.dependsOn buildReactApp 
